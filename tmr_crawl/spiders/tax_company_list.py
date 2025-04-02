@@ -5,20 +5,30 @@ from urllib.parse import urljoin
 
 class TaxCompanyListSpider(scrapy.Spider):
     name = 'tax_company_list'
-    start_urls = [
-        "https://www.gdt.gov.vn/wps/portal/!ut/p/z1/tZNfT4MwFMU_jY_kXqAU9ghMB4ouG-4PfVkYIFRH2bBh-u1lcya-MDTL-tCmybm_c3J7CwyWwETc8DyWvBLxpr1HjK6QDPzAmodjhwYO2mE49P3wTsMJgcVR4I5sj5gBokVGiD5xxk-eO1HR14H9pR47lo199XNgwBIht7KAqIhFxW_wncus3WMlFXWdNPIg2SY8hYiaVmaq61RJEDWFGDRVLBKnijagKR1oqqoa-k-kbk92PvHi4PebMDWG5Eh4cJ05hmNyEpzrWp9J1IY0u0MasGh4toeZqOqyfcfwnz3w-hwoXujQg9eui1evi9cvxN8DyzfV-vsD8tfdjtntlFdCZh8Sll1jvi1ns9LSP5W3qbV_finycvV4qxunY5N_AexGVMM!/dz/d5/L2dBISEvZ0FBIS9nQSEh/"]
-
+    # start_urls = [
+    #     "https://www.gdt.gov.vn/wps/portal/!ut/p/z1/tZNfT4MwFMU_jY_kXqAU9ghMB4ouG-4PfVkYIFRH2bBh-u1lcya-MDTL-tCmybm_c3J7CwyWwETc8DyWvBLxpr1HjK6QDPzAmodjhwYO2mE49P3wTsMJgcVR4I5sj5gBokVGiD5xxk-eO1HR14H9pR47lo199XNgwBIht7KAqIhFxW_wncus3WMlFXWdNPIg2SY8hYiaVmaq61RJEDWFGDRVLBKnijagKR1oqqoa-k-kbk92PvHi4PebMDWG5Eh4cJ05hmNyEpzrWp9J1IY0u0MasGh4toeZqOqyfcfwnz3w-hwoXujQg9eui1evi9cvxN8DyzfV-vsD8tfdjtntlFdCZh8Sll1jvi1ns9LSP5W3qbV_finycvV4qxunY5N_AexGVMM!/dz/d5/L2dBISEvZ0FBIS9nQSEh/"]
+    url_list = 'https://www.gdt.gov.vn/wps/portal/home/dnrrvt'
     custom_settings = {
         'FEEDS': {'tax_company_data.csv': {'format': 'csv', 'encoding': 'utf-8-sig', 'overwrite': True}},
         'USER_AGENT': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         'DOWNLOAD_DELAY': 1,
     }
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.max_links = 100
         self.visited_links = 0
         self.visited_urls = set()
+    def start_requests(self):
+        yield scrapy.Request(url=self.url_list, callback=self.parse_start_url)
+
+    def parse_start_url(self, response):
+        # Lấy danh sách liên kết danh mục
+        links = response.css('div.listnew2 a::attr(href)').getall()
+        for link in links:
+            abs_url = urljoin(response.url, link)
+            if abs_url not in self.visited_urls:
+                self.visited_urls.add(abs_url)
+                yield scrapy.Request(url=abs_url, callback=self.parse)
 
     def parse(self, response):
         # Xử lý bảng dữ liệu
